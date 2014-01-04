@@ -10,9 +10,9 @@ namespace JoqerCtl
 {
     class QuickDump
     {
-        public void ReadOne(string name)
+        public void ReadOne(string queuePath)
         {
-            using (var q = Queue.OpenReader(name, Guid.Empty)) {
+            using (var q = Queue.OpenReader(queuePath)) {
                 var b = q.DequeueOne();
                 if (b != null)
                     Console.WriteLine(Encoding.UTF8.GetString(b));
@@ -20,9 +20,9 @@ namespace JoqerCtl
                     Console.WriteLine("NO DATA");
             }
         }
-        public void ReadAll(string name)
+        public void ReadAll(string queuePath)
         {
-            using (var q = Queue.OpenReader(name, Guid.Empty)) {
+            using (var q = Queue.OpenReader(queuePath)) {
                 float i = 0;
                 var s = Stopwatch.StartNew();
                 var b = q.DequeueOne();

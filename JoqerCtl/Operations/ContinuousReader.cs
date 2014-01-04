@@ -12,10 +12,11 @@ namespace JoqerCtl
         {
             _queue = q;
         }
-        public void Read(string name)
+
+        public void Read(string queuePath)
         {
             int i = 0;
-            using (var q = _queue.GetReader(guid: Guid.Empty)) {
+            using (var q = _queue.GetReader()) {
                 q.Message += (s, e) => {
                     var str = Encoding.ASCII.GetString(e);
                     if (str == null)
