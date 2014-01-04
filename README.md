@@ -1,17 +1,17 @@
 Joqer
 =====
 
-A simple and fast serverless queue. Production ready.
+A simple and fast serverless queue.
 
 Notable features:
 
-* Persistent, close to bandwidth speed.
 * Accepts concurrent writes from multiple threads and processes, without a dedicated server process.
-* CLS compliant, should work in Medium trust.
+* Persistent messages, written close to disk bandwidth speed.
 * Enqueues very large messages (max size on disk 2^32 per message, however, a single message must fit into process memory space).
 * Queue sizes only limited by availalbe disk space.
 * Multiple lock-free concurrent readers.
 * Fast reader catch-up: a reader can read all messages until the queue head in a loop, doesn't need to pop each message separately.
+* CLS compliant, should work in Medium trust.
 
 Production ready.
 
