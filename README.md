@@ -8,12 +8,18 @@ Notable features:
 * Accepts concurrent writes from multiple threads and processes, without a dedicated server process.
 * Persistent messages, written close to disk bandwidth speed.
 * Enqueues very large messages (max size on disk 2^32 per message, however, a single message must fit into process memory space).
-* Queue sizes only limited by availalbe disk space.
+* Queue sizes only limited by available disk space.
 * Multiple lock-free concurrent readers.
-* Fast reader catch-up: a reader can read all messages until the queue head in a loop, doesn't need to pop each message separately.
+* Fast reader catch-up: a reader reads all messages until the queue head in a loop, doesn't need to pop each message separately.
 * CLS compliant, should work in Medium trust.
+* Production ready.
 
-Production ready.
+Great for...
+=========
+
+* Background job queues
+* Application event store
+* Error logging and log collection/forwarding
 
 Try 
 ===
