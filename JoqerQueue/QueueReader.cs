@@ -121,7 +121,6 @@ namespace JoqerQueue
         {
             _cursor = null;
 
-            try { _queue.Dispose(); } catch { }
             try { _dataView.Dispose(); } catch { }
             try { _indexView.Dispose(); } catch { }
             _queue = null;
