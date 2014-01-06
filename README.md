@@ -1,7 +1,7 @@
 Joqer
 =====
 
-A simple and fast serverless queue.
+A simple and fast persistent serverless queue.
 
 Notable features:
 
