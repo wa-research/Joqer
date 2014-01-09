@@ -72,8 +72,14 @@ namespace JoqerQueue
                     _viewInfo.EndingPage = _segmentSizePages;
             }
 
+            long size = _viewInfo.GetSize();
+
+            if (_viewInfo.StartingPage.Bytes >= _segmentSizePages.Bytes ||
+                _viewInfo.StartingPage.Bytes + size > _segmentSizePages.Bytes)
+                throw new ApplicationException("Trying to open a view beyond the end of the current segment");
+
             if (_viewInfo.View == null) {
-                _viewInfo.View = _file.CreateViewAccessor(_viewInfo.StartingPage.Bytes, _viewInfo.GetSize());
+                _viewInfo.View = _file.CreateViewAccessor(_viewInfo.StartingPage.Bytes, size);
             }
 
             _viewInfo.ViewOffset = sn.FileOffset - _viewInfo.StartingPage.Bytes;

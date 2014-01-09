@@ -76,12 +76,8 @@ namespace JoqerCtl
                 DeleteQueue(fullPath);
                 var q = CreateQueue(fullPath, capacity, opt, segments, writeAhead);
                 Console.WriteLine("Re-set queue {0}", q);
-            } else if (operation == "server") {
-                var q = QueueServer(fullPath);
-                Console.WriteLine("Server running. Press ENTER to stop");
-                Console.ReadLine();
             } else if (operation == "read") {
-                new ContinuousReader(Queue.Open(TestQueue)).Read(fullPath);
+                new ContinuousReader(Queue.Open(TestQueue)).Read();
                 WaitForInputAndExit();
             } else if (operation == "readone") {
                 new QuickDump().ReadOne(fullPath);
@@ -107,21 +103,6 @@ namespace JoqerCtl
                 o |= QueueOptions.StoreTimestampInIndex;
 
             return o;
-        }
-
-
-
-        private class Server
-        {
-            public QueueWriter Queue { get; set; }
-        }
-
-        private Server QueueServer(string path)
-        {
-            return new Server
-            {
-                Queue = Queue.OpenWriter(path, lockMode: LockMode.MultiProcess),
-            };
         }
 
         private void DeleteQueue(string path)
@@ -164,7 +145,7 @@ namespace JoqerCtl
             return fullPath;
         }
 
-        private const string ValidOperations = "create|info|reset|server|read|readone|readall|test|hammer";
+        private const string ValidOperations = "create|info|reset|read|readone|readall|test|hammer";
         private static bool IsValidOperation(string operation)
         {
             return ("|" + ValidOperations).Contains("|" + operation.ToLowerInvariant());

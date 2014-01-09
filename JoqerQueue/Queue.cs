@@ -184,7 +184,7 @@ namespace JoqerQueue
             return Path.ChangeExtension(no.ToString().PadLeft(10, '0'), ext);
         }
 
-        public int GetIndexSizeBytes()
+        public int GetIndexRecordSizeBytes()
         {
             return GetIndexSizeBytes(_header.Flags);
         }
