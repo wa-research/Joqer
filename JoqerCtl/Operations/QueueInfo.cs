@@ -30,12 +30,24 @@ namespace JoqerCtl
             Info("Active data segment:", h.ActiveDataFile);
             Info("Active index segment:", h.ActiveIndexFile);
             Info("Active data segment free space:", h.DataSegmentSize.Bytes - h.NextAvailableDataSequenceNumber.FileOffset);
-            Info("Active index segment free entries:", (h.IndexSegmentSize.Bytes - h.NextAvailableIndexSequenceNumber.FileOffset) / q.GetIndexSizeBytes());
-            Info("Total items writen:", ((h.ActiveIndexFile * h.IndexSegmentSize.Bytes) + h.NextAvailableIndexSequenceNumber.FileOffset) / q.GetIndexSizeBytes());
-            Info("First valid data file:", h.FirstValidDataSequenceNumber.FileNumber);
-            Info("First valid index file:", h.FirstValidIndexSequenceNumber.FileNumber);
-            Info("Next item to read:", ISN(h.NextIndexIsnToReadWithDefaultReader, q.GetIndexSizeBytes()));
+            Info("Active index segment free entries:", (h.IndexSegmentSize.Bytes - h.NextAvailableIndexSequenceNumber.FileOffset) / q.GetIndexRecordSizeBytes());
+            Info("Total items writen:", ((h.ActiveIndexFile * h.IndexSegmentSize.Bytes) + h.NextAvailableIndexSequenceNumber.FileOffset) / q.GetIndexRecordSizeBytes());
+            //Info("First valid data file:", h.FirstValidDataSequenceNumber.FileNumber);
+            //Info("First valid index file:", h.FirstValidIndexSequenceNumber.FileNumber);
+            Console.WriteLine();
+            Info("Next item to read:", ISN(h.NextIndexIsnToReadWithDefaultReader, q.GetIndexRecordSizeBytes()));
+            Info("Next item to write:", ISN(h.NextAvailableIndexSequenceNumber, q.GetIndexRecordSizeBytes()));
+            Info("Queue depth:", SequenceDiff(h.NextAvailableIndexSequenceNumber, h.NextIndexIsnToReadWithDefaultReader, q.GetIndexRecordSizeBytes(), h.IndexSegmentSize.Bytes));
+
             Info("Flags:", PrintFlags(h.Flags));
+        }
+
+        private long SequenceDiff(SequenceNumber sn1, SequenceNumber sn2, int recordSize, long indexSegmentSize)
+        {
+            long sz1 = sn1.FileNumber * indexSegmentSize + sn1.FileOffset;
+            long sz2 = sn2.FileNumber * indexSegmentSize + sn2.FileOffset;
+
+            return (sz1 - sz2) / recordSize;
         }
 
         private object PrintFlags(QueueOptions queueOptions)

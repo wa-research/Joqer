@@ -13,7 +13,7 @@ namespace JoqerCtl
             _queue = q;
         }
 
-        public void Read(string queuePath)
+        public void Read()
         {
             int i = 0;
             using (var q = _queue.GetReader()) {

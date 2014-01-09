@@ -23,7 +23,7 @@ namespace JoqerQueue
             {
                 _queue = q,
                 _cursor = settings.Cursor ?? new PersistentDefaultReaderCursor(q),
-                _indexFieldSize = q.GetIndexSizeBytes(),
+                _indexFieldSize = q.GetIndexRecordSizeBytes(),
                 _dataView = new MemoryView(q.Header.DataSegmentSize, q.DataSegmentFilePath, readOnly: true, defaultViewSize: settings.PageCount),
                 _indexView = new MemoryView(q.Header.IndexSegmentSize, q.IndexSegmentFilePath, readOnly: true),
             };
@@ -121,7 +121,6 @@ namespace JoqerQueue
         {
             _cursor = null;
 
-            try { _queue.Dispose(); } catch { }
             try { _dataView.Dispose(); } catch { }
             try { _indexView.Dispose(); } catch { }
             _queue = null;

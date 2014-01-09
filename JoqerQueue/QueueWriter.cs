@@ -27,7 +27,7 @@ namespace JoqerQueue
             { 
                 _queue = q, 
                 _settings = settings,
-                _indexFieldSize = q.GetIndexSizeBytes(),
+                _indexFieldSize = q.GetIndexRecordSizeBytes(),
                 _dataSegmentSize = q.Header.DataSegmentSize,
                 _indexSegmentSize = q.Header.IndexSegmentSize,
                 _dataView = new MemoryView(q.Header.DataSegmentSize, q.DataSegmentFilePath, defaultViewSize: settings.PageCount),
@@ -155,7 +155,6 @@ namespace JoqerQueue
 
         public void Dispose()
         {
-            try { _queue.Dispose(); } catch { }
             try { _dataView.Dispose(); } catch { }
             try { _indexView.Dispose(); } catch { }
             _queue = null;
