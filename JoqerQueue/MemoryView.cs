@@ -1,5 +1,9 @@
 ﻿using System;
 using System.IO.MemoryMappedFiles;
+#if WINDOWS && FAST
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+#endif
 
 namespace JoqerQueue
 {
@@ -118,7 +122,7 @@ namespace JoqerQueue
             public PageCount EndingPage;
             public long ViewOffset;
 
-            public MemoryMappedViewAccessor View;
+            internal MemoryMappedViewAccessor View;
 
             public long GetSize()
             {
@@ -129,6 +133,90 @@ namespace JoqerQueue
             {
                 return StartingPage.Bytes <= sn.FileOffset && sn.FileOffset + slotSize <= EndingPage.Bytes;
             }
+
+            /// <summary>
+            /// Read an <c>Int32</c> at the current view offset
+            /// </summary>
+            /// <returns></returns>
+            public int ReadInt32()
+            {
+                return ReadInt32(0);
+            }
+
+            /// <summary>
+            /// Read an <c>Int32</c> a <paramref name="delta"/> bytes after the current view offset
+            /// </summary>
+            /// <param name="delta"></param>
+            /// <returns></returns>
+            public int ReadInt32(long delta)
+            {
+                return View.ReadInt32(ViewOffset + delta);
+            }
+            /// <summary>
+            /// Read an <c>Int64</c> at the current offset
+            /// </summary>
+            /// <returns></returns>
+            public long ReadInt64()
+            {
+                return View.ReadInt64(ViewOffset);
+            }
+
+#if WINDOWS && FAST
+            public unsafe byte[] ReadArray(int delta, int len)
+            {
+                byte[] arr = new byte[len];
+                byte* ptr = View.Pointer((int)StartingPage.Bytes);
+                try {
+                    Marshal.Copy(IntPtr.Add(new IntPtr(ptr), (int)ViewOffset + delta), arr, 0, len);
+                } finally {
+                    View.SafeMemoryMappedViewHandle.ReleasePointer();
+                }
+                return arr;
+            }
+#else
+            public byte[] ReadArray(int delta, int len)
+            {
+                byte[] data = new byte[len];
+                View.ReadArray(ViewOffset + delta, data, 0, len);
+                return data;
+            }
+#endif
+
+            /// <summary>
+            /// Write a long value at a current view offset
+            /// </summary>
+            /// <param name="value"></param>
+            public void Write(long value)
+            {
+                Write(0, value);
+            }
+
+            /// <summary>
+            /// Write a long value <paramref name="delta"/> bytes after the current view offset
+            /// </summary>
+            /// <param name="delta"></param>
+            /// <param name="value"></param>
+            public void Write(long delta, long value)
+            {
+                View.Write(ViewOffset + delta, value);
+            }
+
+#if WINDOWS && FAST
+            public unsafe void WriteArray(int delta, byte[] data)
+            {
+                byte* ptr = View.Pointer((int)StartingPage.Bytes);
+                try {
+                    Marshal.Copy(data, 0, IntPtr.Add(new IntPtr(ptr), (int)ViewOffset + delta), data.Length);
+                } finally {
+                    View.SafeMemoryMappedViewHandle.ReleasePointer();
+                }
+            }
+#else
+            public void WriteArray(int delta, byte[] data)
+            {
+                View.WriteArray(ViewOffset + delta, data, 0, data.Length);
+            }
+#endif
         }
 
         public void Dispose()
@@ -143,4 +231,46 @@ namespace JoqerQueue
             }
         }
     }
+
+#if WINDOWS && FAST
+    // From: http://connect.microsoft.com/VisualStudio/feedback/details/537635/no-way-to-determine-internal-offset-used-by-memorymappedviewaccessor-makes-safememorymappedviewhandle-property-unusable#tabs
+    internal unsafe static class Helper
+    {
+        static SYSTEM_INFO info;
+
+        static Helper()
+        {
+            GetSystemInfo(ref info);
+        }
+
+        [CLSCompliant(false)]
+        internal static byte* Pointer(this MemoryMappedViewAccessor acc, int offset)
+        {
+            var num = offset % info.dwAllocationGranularity;
+            byte* tmp_ptr = null;
+            RuntimeHelpers.PrepareConstrainedRegions();
+            acc.SafeMemoryMappedViewHandle.AcquirePointer(ref tmp_ptr);
+            tmp_ptr += num;
+
+            return tmp_ptr;
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern void GetSystemInfo(ref SYSTEM_INFO lpSystemInfo);
+
+        internal struct SYSTEM_INFO
+        {
+            internal int dwOemId;
+            internal int dwPageSize;
+            internal IntPtr lpMinimumApplicationAddress;
+            internal IntPtr lpMaximumApplicationAddress;
+            internal IntPtr dwActiveProcessorMask;
+            internal int dwNumberOfProcessors;
+            internal int dwProcessorType;
+            internal int dwAllocationGranularity;
+            internal short wProcessorLevel;
+            internal short wProcessorRevision;
+        }
+    }
+#endif
 }

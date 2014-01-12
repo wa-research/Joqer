@@ -74,8 +74,8 @@ namespace JoqerQueue
             // and readers won't access it until we update the index
             var view = _dataView.GetView(dsn, slotSize);
 
-            view.View.Write(view.ViewOffset, bodyLen);
-            view.View.WriteArray(view.ViewOffset + 4, body, 0, bodyLen);
+            view.Write(bodyLen);
+            view.WriteArray(4, body);
 
             // Lock the lockfile again to append to the index and advance the index pointer.
             // We keep the lock until the index entry is written and only then update the head;
@@ -128,28 +128,28 @@ namespace JoqerQueue
         
         private void IndexWriterDsn(MemoryView.ViewInfo view, SequenceNumber dataLsn, int bodyLength)
         {
-            view.View.Write(view.ViewOffset, dataLsn.LogicalOffset);
+            view.Write(dataLsn.LogicalOffset);
         }
 
         private void IndexWriterDsnAndSize(MemoryView.ViewInfo view, SequenceNumber dataLsn, int bodyLength)
         {
-            view.View.Write(view.ViewOffset, dataLsn.LogicalOffset);
-            view.View.Write(view.ViewOffset + sizeof(long), bodyLength);
+            view.Write(dataLsn.LogicalOffset);
+            view.Write(sizeof(long), bodyLength);
         }
 
         private void IndexWriterDsnAndTime(MemoryView.ViewInfo view, SequenceNumber dataLsn, int bodyLength)
         {
-            view.View.Write(view.ViewOffset, dataLsn.LogicalOffset);
+            view.Write(dataLsn.LogicalOffset);
             // This is not as testable, but is more efficient than reading the ticks when 
             // we don't use them and pass them on every invocation like we do with bodyLength
-            view.View.Write(view.ViewOffset + sizeof(long), DateTime.UtcNow.Ticks);
+            view.Write(sizeof(long), DateTime.UtcNow.Ticks);
         }
 
         private void IndexWriterDsnLengthAndTime(MemoryView.ViewInfo view, SequenceNumber dataLsn, int bodyLength)
         {
-            view.View.Write(view.ViewOffset, dataLsn.LogicalOffset);
-            view.View.Write(view.ViewOffset + sizeof(long), bodyLength);
-            view.View.Write(view.ViewOffset + sizeof(long) + sizeof(int), DateTime.UtcNow.Ticks);
+            view.Write(dataLsn.LogicalOffset);
+            view.Write(sizeof(long), bodyLength);
+            view.Write(sizeof(long) + sizeof(int), DateTime.UtcNow.Ticks);
         }
         #endregion
 

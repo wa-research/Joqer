@@ -35,8 +35,8 @@ namespace JoqerCtl
             //Info("First valid data file:", h.FirstValidDataSequenceNumber.FileNumber);
             //Info("First valid index file:", h.FirstValidIndexSequenceNumber.FileNumber);
             Console.WriteLine();
-            Info("Next item to read:", ISN(h.NextIndexIsnToReadWithDefaultReader, q.GetIndexRecordSizeBytes()));
-            Info("Next item to write:", ISN(h.NextAvailableIndexSequenceNumber, q.GetIndexRecordSizeBytes()));
+            Info("Next index position to read:", ISN(h.NextIndexIsnToReadWithDefaultReader, q.GetIndexRecordSizeBytes()));
+            Info("Next index position to write:", ISN(h.NextAvailableIndexSequenceNumber, q.GetIndexRecordSizeBytes()));
             Info("Queue depth:", SequenceDiff(h.NextAvailableIndexSequenceNumber, h.NextIndexIsnToReadWithDefaultReader, q.GetIndexRecordSizeBytes(), h.IndexSegmentSize.Bytes));
 
             Info("Flags:", PrintFlags(h.Flags));

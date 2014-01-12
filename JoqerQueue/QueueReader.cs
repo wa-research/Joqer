@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO.MemoryMappedFiles;
 using System.Threading;
 
@@ -95,9 +96,11 @@ namespace JoqerQueue
         private byte[] DequeueWithLengthInBody(SequenceNumber isn)
         {
             var vi = _indexView.GetView(isn, _indexFieldSize);
-            var dsn = new SequenceNumber { LogicalOffset = vi.View.ReadInt64(vi.ViewOffset) };
+            var dsn = new SequenceNumber { LogicalOffset = vi.ReadInt64() };
             var dv = _dataView.GetView(dsn, sizeof(int));
-            int len = dv.View.ReadInt32(dv.ViewOffset);
+            int len = dv.ReadInt32();
+
+            Debug.Assert(len <= 102400, "Read length larger than 102400");
 
             return ReadData(dv, dsn, len);
         }
@@ -105,21 +108,18 @@ namespace JoqerQueue
         private byte[] DequeueWithLengthInIndex(SequenceNumber isn)
         {
             var vi = _indexView.GetView(isn, _indexFieldSize);
-            var dsn = new SequenceNumber { LogicalOffset = vi.View.ReadInt64(vi.ViewOffset) };
-            var len = vi.View.ReadInt32(vi.ViewOffset + sizeof(long));
+            var dsn = new SequenceNumber { LogicalOffset = vi.ReadInt64() };
+            var len = vi.ReadInt32(sizeof(long));
 
             return ReadData(_dataView.GetView(dsn, len), dsn, len);
         }
 
         private byte[] ReadData(MemoryView.ViewInfo vi, SequenceNumber dsn, int len)
         {
-            byte[] data = new byte[len];
             if (!vi.FitsIntoCurrentView(dsn, len)) {
                 vi = _dataView.GetView(dsn, len);
             }
-            vi.View.ReadArray(vi.ViewOffset + 4, data, 0, (int)len);
-
-            return data;
+            return vi.ReadArray(4, len);
         }
 
         public void Dispose()
