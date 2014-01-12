@@ -24,7 +24,7 @@ namespace JoqerQueue
             try {
                 var t = (timeOut <= 0) ? Timeout.Infinite : timeOut;
 
-                _hasHandle = _mutex.WaitOne(timeOut, false);
+				_hasHandle = _mutex.WaitOne(t, false);
                 if (_hasHandle == false) {
                     throw new TimeoutException("Could not acquire exclusive access on mutex " + name);
                 }
