@@ -7,5 +7,6 @@ namespace JoqerQueue
         public Guid Guid;
         public int PageCount; 
         public IReaderCursor Cursor;
+        public int PollInterval;
     }
 }

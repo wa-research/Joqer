@@ -27,7 +27,7 @@ namespace JoqerCtl
                 var s = Stopwatch.StartNew();
                 var b = q.DequeueOne();
                 while (b != null) {
-                    Console.WriteLine(Encoding.ASCII.GetString(b).Substring(0, 20));
+                    //Console.WriteLine(Encoding.ASCII.GetString(b).Substring(0, 20));
                     i++;
                     b = q.DequeueOne();
                 }
