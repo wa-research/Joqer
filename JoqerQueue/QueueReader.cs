@@ -11,6 +11,7 @@ namespace JoqerQueue
         MemoryView _indexView;
         private IReaderCursor _cursor;
         private int _indexFieldSize;
+        QueueReaderSettings _settings;
 
 
         public bool IsRunning { get; private set; }
@@ -19,9 +20,13 @@ namespace JoqerQueue
 
         internal static QueueReader Create(Queue q, QueueReaderSettings settings)
         {
+            if (settings.PollInterval < 0)
+                settings.PollInterval = 1;
+
             return new QueueReader
             {
                 _queue = q,
+                _settings = settings,
                 _cursor = settings.Cursor ?? new PersistentDefaultReaderCursor(q),
                 _indexFieldSize = q.GetIndexRecordSizeBytes(),
                 _dataView = new MemoryView(q.Header.DataSegmentSize, q.DataSegmentFilePath, readOnly: true, defaultViewSize: settings.PageCount),
@@ -47,7 +52,7 @@ namespace JoqerQueue
                     ev.Invoke(this, Dequeue(isn));
                     isn = _cursor.Advance(isn);
                 }
-                Thread.Sleep(1);
+                Thread.Sleep(_settings.PollInterval);
             }
         }
 

@@ -50,14 +50,14 @@ namespace JoqerQueue
             return Queue.Open(queuePath).GetWriter(settings);
         }
 
-        public static QueueReader OpenReader(string queuePath, Guid guid = default(Guid))
+        public static QueueReader OpenReader(string queuePath, QueueReaderSettings settings = default(QueueReaderSettings))
         {
-            return Queue.Open(queuePath).GetReader();
+            return Queue.Open(queuePath).GetReader(settings);
         }
 
-        public QueueReader GetReader(Guid guid = default(Guid))
+        public QueueReader GetReader(QueueReaderSettings settings)
         {
-            return QueueReader.Create(this, new QueueReaderSettings { Guid = guid });
+            return QueueReader.Create(this, settings);
         }
 
         public QueueWriter GetWriter(QueueWriterSettings settings)

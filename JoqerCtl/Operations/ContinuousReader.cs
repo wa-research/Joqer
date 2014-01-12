@@ -16,7 +16,7 @@ namespace JoqerCtl
         public void Read()
         {
             int i = 0;
-            using (var q = _queue.GetReader()) {
+            using (var q = _queue.GetReader(new QueueReaderSettings { PollInterval = 150 })) {
                 q.Message += (s, e) => {
                     var str = Encoding.ASCII.GetString(e);
                     if (str == null)
