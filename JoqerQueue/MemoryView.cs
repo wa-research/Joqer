@@ -168,6 +168,11 @@ namespace JoqerQueue
                 IntPtr ptr = View.Pointer((int)StartingPage.Bytes);
                 try {
                     Marshal.Copy(IntPtr.Add(ptr, (int)ViewOffset + delta), arr, 0, len);
+#if DEBUG
+                } catch (Exception ex) {
+                    Console.WriteLine("ERROR: {0}", ex.Message);
+                    Console.WriteLine("Was reading at {0}:{1}+{2} ({3} bytes). Current windows is Pg{4}-Pg{5}", FileNo, ViewOffset, delta, len, StartingPage, EndingPage);
+#endif
                 } finally {
                     View.SafeMemoryMappedViewHandle.ReleasePointer();
                 }

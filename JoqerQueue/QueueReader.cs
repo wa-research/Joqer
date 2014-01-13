@@ -100,8 +100,6 @@ namespace JoqerQueue
             var dv = _dataView.GetView(dsn, sizeof(int));
             int len = dv.ReadInt32();
 
-            Debug.Assert(len <= 102400, "Read length larger than 102400");
-
             return ReadData(dv, dsn, len);
         }
 

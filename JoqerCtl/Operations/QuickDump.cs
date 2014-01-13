@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using JoqerQueue;
 
 namespace JoqerCtl
@@ -20,20 +17,26 @@ namespace JoqerCtl
                     Console.WriteLine("NO DATA");
             }
         }
+
+        const int MB = 1024 * 1024;
+
         public void ReadAll(string queuePath)
         {
             using (var q = Queue.OpenReader(queuePath)) {
                 float i = 0;
+                float sz = 0;
+                int nulls = 0;
                 var s = Stopwatch.StartNew();
                 var b = q.DequeueOne();
                 while (b != null) {
-                    //Console.WriteLine(Encoding.ASCII.GetString(b).Substring(0, 20));
                     i++;
+                    sz += b.Length;
                     b = q.DequeueOne();
                 }
                 s.Stop();
                 float msec = s.ElapsedMilliseconds;
-                Console.WriteLine("Read {0} messages in {1} msec at {2} ops per second or {3}usec per op", i, s.ElapsedMilliseconds, Math.Round(i / s.ElapsedMilliseconds * 1000, 2), msec / i * 1000);
+                Console.WriteLine("Read {0} MB in {1} msec at {2} MB/sec", sz / MB, msec, Math.Round(sz / msec * 1000 / MB, 2));
+                Console.WriteLine("  or {0} messages at {1} ops per second, {2} usec per op on average", i, Math.Round(i / msec * 1000, 2), msec / i * 1000);
             }
         }
     }

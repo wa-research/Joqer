@@ -14,6 +14,7 @@ namespace JoqerCtl
         const int JOBS_PER_WORKER = 10000;
         const int PAYLOAD_SIZE = 256;
         const int VIEW_SIZE = 5120;
+        const int MB = 1024 * 1024;
 
         string _queueName;
 
@@ -37,7 +38,7 @@ namespace JoqerCtl
             if (mode == LockMode.SingleThread && workers > 1)
                 Console.WriteLine("WARNING: Using multiple threads with no locking!");
 
-            Console.WriteLine("Starting new test with {0} workers enqueieing {1} payloads of {2} bytes each in lock mode {3}", workers, jobs_per_worker, payload_size, mode);
+            Console.WriteLine("Starting new test with {0} workers writing {1} messages of {2} bytes each in lock mode {3}", workers, jobs_per_worker, payload_size, mode);
 
             var s = Stopwatch.StartNew();
             Task[] tasks = new Task[workers];
@@ -52,8 +53,15 @@ namespace JoqerCtl
                 float totalJobs = workers * jobs_per_worker;
                 float msec = s.ElapsedMilliseconds;
                 float ticks = s.ElapsedTicks;
+                float sz = totalJobs * payload_size;
 
-                Console.WriteLine("Enqueued {0} jobs in {1} ms at {2} ops per second or {3} usec per op ({4} ticks per op)", totalJobs, s.ElapsedMilliseconds, Math.Round(totalJobs / s.ElapsedMilliseconds * 1000, 2), msec / totalJobs * 1000, ticks / totalJobs);
+                if (msec < 1000) {
+                    Console.WriteLine();
+                    Console.WriteLine("WARNING: Test time is too short, results will be skewed");
+                }
+                Console.WriteLine();
+                Console.WriteLine("Enqueued {0} MB in {1} msec at {2} MB/sec", sz / MB, msec, Math.Round(sz / msec * 1000 / MB, 2));
+                Console.WriteLine("      or {0} messages at {1} ops per second or {2} usec per op ({3} ticks per op) on average", totalJobs, Math.Round(totalJobs / msec * 1000, 2), msec / totalJobs * 1000, ticks / totalJobs);
             } catch (AggregateException e) {
                 Console.Error.WriteLine("\nThe following exceptions have been thrown by WaitAll():");
                 for (int j = 0; j < e.InnerExceptions.Count; j++) {
@@ -114,10 +122,8 @@ namespace JoqerCtl
                 var payload = Encoding.ASCII.GetBytes(sb.ToString());
                 for (int i = 0; i < jobs; i++) {
                     q.Enqueue(payload);
-                    //Console.WriteLine(sb.ToString().Substring(0, 20));
                 }
             }
-            //Console.WriteLine("Worker {0} finished.", task);
         }
     }
 }
