@@ -1,5 +1,9 @@
 ﻿using System;
 using System.IO.MemoryMappedFiles;
+#if WINDOWS && FAST
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+#endif
 
 namespace JoqerQueue
 {
@@ -118,7 +122,7 @@ namespace JoqerQueue
             public PageCount EndingPage;
             public long ViewOffset;
 
-            public MemoryMappedViewAccessor View;
+            internal MemoryMappedViewAccessor View;
 
             public long GetSize()
             {
@@ -129,6 +133,140 @@ namespace JoqerQueue
             {
                 return StartingPage.Bytes <= sn.FileOffset && sn.FileOffset + slotSize <= EndingPage.Bytes;
             }
+
+            /// <summary>
+            /// Read an <c>Int32</c> at the current view offset
+            /// </summary>
+            /// <returns></returns>
+            public int ReadInt32()
+            {
+                return ReadInt32(0);
+            }
+
+            /// <summary>
+            /// Read an <c>Int32</c> a <paramref name="delta"/> bytes after the current view offset
+            /// </summary>
+            /// <param name="delta"></param>
+            /// <returns></returns>
+            public int ReadInt32(long delta)
+            {
+                return View.ReadInt32(ViewOffset + delta);
+            }
+            /// <summary>
+            /// Read an <c>Int64</c> at the current offset
+            /// </summary>
+            /// <returns></returns>
+            public long ReadInt64()
+            {
+                return View.ReadInt64(ViewOffset);
+            }
+
+#if WINDOWS && FAST
+            public byte[] ReadArray(int delta, int len)
+            {
+                byte[] arr = new byte[len];
+                IntPtr ptr = View.Pointer((int)StartingPage.Bytes);
+                try {
+                    Marshal.Copy(IntPtr.Add(ptr, (int)ViewOffset + delta), arr, 0, len);
+#if DEBUG
+                } catch (Exception ex) {
+                    Console.WriteLine("ERROR: {0}", ex.Message);
+                    Console.WriteLine("Was reading at {0}:{1}+{2} ({3} bytes). Current windows is Pg{4}-Pg{5}", FileNo, ViewOffset, delta, len, StartingPage, EndingPage);
+#endif
+                } finally {
+                    View.SafeMemoryMappedViewHandle.ReleasePointer();
+                }
+                return arr;
+            }
+#else
+            public byte[] ReadArray(int delta, int len)
+            {
+                byte[] data = new byte[len];
+                View.ReadArray(ViewOffset + delta, data, 0, len);
+                return data;
+            }
+#endif
+            /// <summary>
+            /// Write a long value at a current view offset
+            /// </summary>
+            /// <param name="value"></param>
+            public void Write(long value)
+            {
+                View.Write(ViewOffset, value);
+            }
+
+#if WINDOWS && FAST
+
+            public void Write(long value1, int value2)
+            {
+                IntPtr ptr = IntPtr.Add(View.Pointer((int)StartingPage.Bytes), (int)ViewOffset);
+                try {
+                    Marshal.WriteInt64(ptr, value1);
+                    Marshal.WriteInt32(IntPtr.Add(ptr, sizeof(long)), value2);
+                } finally {
+                    View.SafeMemoryMappedViewHandle.ReleasePointer();
+                }
+            }
+
+            public void Write(long value1, long value2)
+            {
+                IntPtr ptr = IntPtr.Add(View.Pointer((int)StartingPage.Bytes), (int)ViewOffset);
+                try {
+                    Marshal.WriteInt64(ptr, value1);
+                    Marshal.WriteInt64(IntPtr.Add(ptr, sizeof(long)), value2);
+                } finally {
+                    View.SafeMemoryMappedViewHandle.ReleasePointer();
+                }
+            }
+
+            public void Write(long value1, int value2, long value3)
+            {
+                IntPtr ptr = IntPtr.Add(View.Pointer((int)StartingPage.Bytes), (int)ViewOffset);
+                try {
+                    Marshal.WriteInt64(ptr, value1);
+                    Marshal.WriteInt32(IntPtr.Add(ptr, sizeof(long)), value2);
+                    Marshal.WriteInt64(IntPtr.Add(ptr, sizeof(int) + sizeof(long)), value3);
+                } finally {
+                    View.SafeMemoryMappedViewHandle.ReleasePointer();
+                }
+            }
+
+            public void WriteArrayWithLengthPrefix(byte[] data)
+            {
+                IntPtr ptr = IntPtr.Add(View.Pointer((int)StartingPage.Bytes), (int)ViewOffset);
+                try {
+                    Marshal.WriteInt32(ptr, data.Length);
+                    Marshal.Copy(data, 0, IntPtr.Add(ptr, sizeof(int)), data.Length);
+                } finally {
+                    View.SafeMemoryMappedViewHandle.ReleasePointer();
+                }
+            }
+#else
+            public void Write(long value1, int value2)
+            {
+                View.Write(ViewOffset, value1);
+                View.Write(ViewOffset + sizeof(long), value2);
+            }
+
+            public void Write(long value1, long value2)
+            {
+                View.Write(ViewOffset, value1);
+                View.Write(ViewOffset + sizeof(long), value2);
+            }
+
+            public void Write(long value1, int value2, long value3)
+            {
+                View.Write(ViewOffset, value1);
+                View.Write(ViewOffset + sizeof(long), value2);
+                View.Write(ViewOffset + sizeof(long) + sizeof(int), value3);
+            }
+
+            public void WriteArrayWithLengthPrefix(byte[] data)
+            {
+                View.Write(data.Length);
+                View.WriteArray(ViewOffset + sizeof(int), data, 0, data.Length);
+            }
+#endif
         }
 
         public void Dispose()
@@ -143,4 +281,45 @@ namespace JoqerQueue
             }
         }
     }
+
+#if WINDOWS && FAST
+    // From: http://connect.microsoft.com/VisualStudio/feedback/details/537635/no-way-to-determine-internal-offset-used-by-memorymappedviewaccessor-makes-safememorymappedviewhandle-property-unusable#tabs
+    internal unsafe static class Helper
+    {
+        static SYSTEM_INFO info;
+
+        static Helper()
+        {
+            GetSystemInfo(ref info);
+        }
+
+        internal static IntPtr Pointer(this MemoryMappedViewAccessor acc, int offset)
+        {
+            int num = offset % info.dwAllocationGranularity;
+            byte* tmp_ptr = null;
+            RuntimeHelpers.PrepareConstrainedRegions();
+            acc.SafeMemoryMappedViewHandle.AcquirePointer(ref tmp_ptr);
+            tmp_ptr += num;
+
+            return new IntPtr(tmp_ptr);
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern void GetSystemInfo(ref SYSTEM_INFO lpSystemInfo);
+
+        internal struct SYSTEM_INFO
+        {
+            internal int dwOemId;
+            internal int dwPageSize;
+            internal IntPtr lpMinimumApplicationAddress;
+            internal IntPtr lpMaximumApplicationAddress;
+            internal IntPtr dwActiveProcessorMask;
+            internal int dwNumberOfProcessors;
+            internal int dwProcessorType;
+            internal int dwAllocationGranularity;
+            internal short wProcessorLevel;
+            internal short wProcessorRevision;
+        }
+    }
+#endif
 }

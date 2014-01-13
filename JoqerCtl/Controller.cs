@@ -136,11 +136,12 @@ namespace JoqerCtl
 
             Directory.CreateDirectory(fullPath);
 
+#if !MONO
             var sec = new DirectorySecurity();
             sec.AddAccessRule(new FileSystemAccessRule("Everyone", FileSystemRights.FullControl, AccessControlType.Allow));
             Directory.SetAccessControl(fullPath, sec);
-
-            Queue q = Queue.Create(path, capacity, idxCapacity, flags, maxSegments, writeAhead);
+#endif
+            Queue.Create(path, capacity, idxCapacity, flags, maxSegments, writeAhead);
 
             return fullPath;
         }

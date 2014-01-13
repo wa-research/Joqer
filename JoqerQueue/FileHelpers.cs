@@ -8,8 +8,6 @@ namespace JoqerQueue
 {
     public static class FileHelpers
     {
-        private static TimeSpan _delay = TimeSpan.FromMilliseconds(5);
-
         public static MemoryMappedFile OpenOrCreateSegment(string path, PageCount pages)
         {
             MemoryMappedFile mmf = null;

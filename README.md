@@ -29,34 +29,33 @@ Try
 
         JoqerCtl create c:\var\spool\TestQueue
 
-2. Test it with 10 parallel threads, multiple process lock, 5000 messages of 100k each:
+2. Test it with 10 parallel workers, multiple process lock, 5000 messages of 100k each, on a virtual machine (Windows 7/32-bit on Parallels 9, 2 virtual cores on MacBook Air i7):
 
-        c:\Joqer> JoqerCtl test -w10 -j5000 -s102400 -mp
-        Starting new test with 10 workers enqueieing 5000 payloads of 102400 bytes each in lock mode MultiProcess
-
-        Enqueued 50000 jobs in 85204 ms at 586.83 ops per second or 1704.08 usec per op (17040.96 ticks per op)
-    
-That's 58.6 MB/sec on a virtual machine, with pure .NET and no unsafe methods.
-
-Single process mode writes at 63 MB/sec in pure .NET on a virtual machine (Windows 7/32-bit on Parallels 9, 2 virtual cores on MacBook Air i7):
-
-        c:\Joqer> JoqerCtl test -w10 -j5000 -s1024 -lp
-        Starting new test with 10 workers enqueieing 5000 payloads of 1024 bytes each in lock mode SingleProcess
+        c:\Joqer> JoqerCtl test -w10 -j5000 -s102400
         
-        Enqueued 50000 jobs in 793 ms at 63051.7 ops per second or 15.86 usec per op (158.6284 ticks per op)
+        Starting new test with 10 workers writing 5000 messages of 102400 bytes each in lock mode MultiProcess
 
-Or 253 MB/sec using unsafe methods (requires full trust) in multi-process mode:
+        Enqueued 4882.813 MB in 25467 msec at 191.73 MB/sec
+              or 50000 messages at 1963.33 ops per second or 509.34 usec per op (5093.507 ticks per op) on average
+    
+That's 191.7 MB/sec throughput on a virtual machine, muliple writer processes and no server needed!
 
-        C:\Joqer> JoqerCtl test -w10 -j5000 -s102400        Starting new test with 10 workers enqueieing 5000 payloads of 102400 bytes each in lock mode MultiProcess        Enqueued 50000 jobs in 19751 ms at 2531.52 ops per second or 395.02 usec per op (3950.205 ticks per op)
+Single process mode writes at 265 MB/sec:
 
-263 MB/sec without global locking:
+        c:\Joqer> JoqerCtl test -w10 -j5000 -s102400 -lm
 
-        C:\Joqer> JoqerCtl test -w1 -j100000 -s1024 -ls        Starting new test with 1 workers enqueieing 100000 payloads of 1024 bytes each in lock mode SingleThread        Enqueued 100000 jobs in 371 ms at 269541.78 ops per second or 3.71 usec per op (37.14478 ticks per op)
+        Starting new test with 10 workers writing 5000 messages of 102400 bytes each in lock mode SingleProcess
 
-Read it back at ~233 MB/sec:
+        Enqueued 4882.813 MB in 18370 msec at 265.8 MB/sec
+              or 50000 messages at 2721.83 ops per second or 367.4 usec per op (3674.039 ticks per op) on average
 
-        C:\Joqer> JoqerCtl readall TestQueue        Read 50000 messages in 20925 msec at 2389.49 ops per second or 418.5usec per op
-
+Read it back at ~180 MB/sec:
+
+        C:\Joqer> JoqerCtl readall TestQueue
+
+        Read 4882.813 MB in 26172 msec at 186.57 MB/sec
+          or 50000 messages at 1910.44 ops per second, 523.44 usec per op on average
+
 Use
 ===
 
