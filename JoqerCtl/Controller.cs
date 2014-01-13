@@ -77,7 +77,8 @@ namespace JoqerCtl
                 var q = CreateQueue(fullPath, capacity, opt, segments, writeAhead);
                 Console.WriteLine("Re-set queue {0}", q);
             } else if (operation == "read") {
-                new ContinuousReader(Queue.Open(TestQueue)).Read();
+                var readloop = new ContinuousReader(Queue.Open(TestQueue));
+                readloop.Start();
                 WaitForInputAndExit();
             } else if (operation == "readone") {
                 new QuickDump().ReadOne(fullPath);

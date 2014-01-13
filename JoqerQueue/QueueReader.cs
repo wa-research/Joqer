@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Diagnostics;
-using System.IO.MemoryMappedFiles;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace JoqerQueue
 {
@@ -13,7 +12,7 @@ namespace JoqerQueue
         private IReaderCursor _cursor;
         private int _indexFieldSize;
         QueueReaderSettings _settings;
-
+        CancellationTokenSource _cancellator = new CancellationTokenSource();
 
         public bool IsRunning { get; private set; }
 
@@ -35,8 +34,26 @@ namespace JoqerQueue
             };
         }
 
-        public void StartLoop()
+        private void PollerLoop(EventHandler<byte[]> ev)
         {
+            while (!_cancellator.Token.IsCancellationRequested) {
+                Thread.Sleep(_settings.PollInterval);
+
+                SequenceNumber isn = _cursor.CurrentIsn();
+                SequenceNumber maxisn = _cursor.MaxIsn();
+
+                while (!_cancellator.Token.IsCancellationRequested && isn.LogicalOffset < maxisn.LogicalOffset) {
+                    ev.Invoke(this, Dequeue(isn));
+                    isn = _cursor.Advance(isn);
+                }
+            }
+        }
+
+        public void Start()
+        {
+            if (IsRunning)
+                return;
+            
             var ev = Message;
             if (ev == null) {
                 IsRunning = false;
@@ -45,27 +62,21 @@ namespace JoqerQueue
 
             IsRunning = true;
 
-            while (IsRunning) {
-                SequenceNumber isn = _cursor.CurrentIsn();
-                SequenceNumber maxisn = _queue.ReadNextAvailableIndexSequenceNumber();
-
-                while (isn.LogicalOffset < maxisn.LogicalOffset) {
-                    ev.Invoke(this, Dequeue(isn));
-                    isn = _cursor.Advance(isn);
-                }
-                Thread.Sleep(_settings.PollInterval);
-            }
+            Task t = Task.Factory.StartNew(() => PollerLoop(ev), _cancellator.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+            var ts = t.Status;
         }
 
-        public void StopLoop()
+        public void Stop()
         {
+            _cancellator.Cancel();
+
             IsRunning = false;
         }
 
         public byte[] DequeueOne()
         {
             SequenceNumber currentisn = _cursor.CurrentIsn();
-            SequenceNumber maxisn = _queue.ReadNextAvailableIndexSequenceNumber();
+            SequenceNumber maxisn = _cursor.MaxIsn();
 
             if (currentisn.LogicalOffset >= maxisn.LogicalOffset)
                 return null;
@@ -122,6 +133,11 @@ namespace JoqerQueue
 
         public void Dispose()
         {
+            if (_cancellator != null && IsRunning)
+                _cancellator.Cancel();
+
+            IsRunning = false;
+
             _cursor = null;
 
             try { _dataView.Dispose(); } catch { }

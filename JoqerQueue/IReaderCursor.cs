@@ -5,5 +5,6 @@ namespace JoqerQueue
     {
         SequenceNumber Advance(SequenceNumber isn);
         SequenceNumber CurrentIsn();
+        SequenceNumber MaxIsn();
     }
 }

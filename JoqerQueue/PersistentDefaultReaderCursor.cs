@@ -19,6 +19,11 @@ namespace JoqerQueue
             return _queue.ReadNextIsnForDefaultReader();
         }
 
+        public SequenceNumber MaxIsn()
+        {
+            return _queue.ReadNextAvailableIndexSequenceNumber();
+        }
+
         public SequenceNumber Advance(SequenceNumber isn)
         {
             SequenceNumber nextisn = IncrementIndexSequenceNumber(isn, _indexSegmentSize.Bytes);
