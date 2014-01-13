@@ -74,8 +74,7 @@ namespace JoqerQueue
             // and readers won't access it until we update the index
             var view = _dataView.GetView(dsn, slotSize);
 
-            view.Write(bodyLen);
-            view.WriteArray(4, body);
+            view.WriteArrayWithLengthPrefix(body);
 
             // Lock the lockfile again to append to the index and advance the index pointer.
             // We keep the lock until the index entry is written and only then update the head;

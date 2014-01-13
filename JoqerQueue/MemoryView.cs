@@ -162,12 +162,12 @@ namespace JoqerQueue
             }
 
 #if WINDOWS && FAST
-            public unsafe byte[] ReadArray(int delta, int len)
+            public byte[] ReadArray(int delta, int len)
             {
                 byte[] arr = new byte[len];
-                byte* ptr = View.Pointer((int)StartingPage.Bytes);
+                IntPtr ptr = View.Pointer((int)StartingPage.Bytes);
                 try {
-                    Marshal.Copy(IntPtr.Add(new IntPtr(ptr), (int)ViewOffset + delta), arr, 0, len);
+                    Marshal.Copy(IntPtr.Add(ptr, (int)ViewOffset + delta), arr, 0, len);
                 } finally {
                     View.SafeMemoryMappedViewHandle.ReleasePointer();
                 }
@@ -202,19 +202,21 @@ namespace JoqerQueue
             }
 
 #if WINDOWS && FAST
-            public unsafe void WriteArray(int delta, byte[] data)
+            public void WriteArrayWithLengthPrefix(byte[] data)
             {
-                byte* ptr = View.Pointer((int)StartingPage.Bytes);
+                IntPtr ptr = IntPtr.Add(View.Pointer((int)StartingPage.Bytes), (int)ViewOffset);
                 try {
-                    Marshal.Copy(data, 0, IntPtr.Add(new IntPtr(ptr), (int)ViewOffset + delta), data.Length);
+                    Marshal.WriteInt32(ptr, data.Length);
+                    Marshal.Copy(data, 0, IntPtr.Add(ptr, sizeof(int)), data.Length);
                 } finally {
                     View.SafeMemoryMappedViewHandle.ReleasePointer();
                 }
             }
 #else
-            public void WriteArray(int delta, byte[] data)
+            public void WriteArrayWithLengthPrefix(byte[] data)
             {
-                View.WriteArray(ViewOffset + delta, data, 0, data.Length);
+                View.Write(data.Length);
+                View.WriteArray(ViewOffset + sizeof(int), data, 0, data.Length);
             }
 #endif
         }
@@ -243,16 +245,15 @@ namespace JoqerQueue
             GetSystemInfo(ref info);
         }
 
-        [CLSCompliant(false)]
-        internal static byte* Pointer(this MemoryMappedViewAccessor acc, int offset)
+        internal static IntPtr Pointer(this MemoryMappedViewAccessor acc, int offset)
         {
-            var num = offset % info.dwAllocationGranularity;
+            int num = offset % info.dwAllocationGranularity;
             byte* tmp_ptr = null;
             RuntimeHelpers.PrepareConstrainedRegions();
             acc.SafeMemoryMappedViewHandle.AcquirePointer(ref tmp_ptr);
             tmp_ptr += num;
 
-            return tmp_ptr;
+            return new IntPtr(tmp_ptr);
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
