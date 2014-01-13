@@ -132,23 +132,19 @@ namespace JoqerQueue
 
         private void IndexWriterDsnAndSize(MemoryView.ViewInfo view, SequenceNumber dataLsn, int bodyLength)
         {
-            view.Write(dataLsn.LogicalOffset);
-            view.Write(sizeof(long), bodyLength);
+            view.Write(dataLsn.LogicalOffset, bodyLength);
         }
 
         private void IndexWriterDsnAndTime(MemoryView.ViewInfo view, SequenceNumber dataLsn, int bodyLength)
         {
-            view.Write(dataLsn.LogicalOffset);
             // This is not as testable, but is more efficient than reading the ticks when 
             // we don't use them and pass them on every invocation like we do with bodyLength
-            view.Write(sizeof(long), DateTime.UtcNow.Ticks);
+            view.Write(dataLsn.LogicalOffset, DateTime.UtcNow.Ticks);
         }
 
         private void IndexWriterDsnLengthAndTime(MemoryView.ViewInfo view, SequenceNumber dataLsn, int bodyLength)
         {
-            view.Write(dataLsn.LogicalOffset);
-            view.Write(sizeof(long), bodyLength);
-            view.Write(sizeof(long) + sizeof(int), DateTime.UtcNow.Ticks);
+            view.Write(dataLsn.LogicalOffset, bodyLength, DateTime.UtcNow.Ticks);
         }
         #endregion
 

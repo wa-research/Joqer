@@ -181,27 +181,51 @@ namespace JoqerQueue
                 return data;
             }
 #endif
-
             /// <summary>
             /// Write a long value at a current view offset
             /// </summary>
             /// <param name="value"></param>
             public void Write(long value)
             {
-                Write(0, value);
-            }
-
-            /// <summary>
-            /// Write a long value <paramref name="delta"/> bytes after the current view offset
-            /// </summary>
-            /// <param name="delta"></param>
-            /// <param name="value"></param>
-            public void Write(long delta, long value)
-            {
-                View.Write(ViewOffset + delta, value);
+                View.Write(ViewOffset, value);
             }
 
 #if WINDOWS && FAST
+
+            public void Write(long value1, int value2)
+            {
+                IntPtr ptr = IntPtr.Add(View.Pointer((int)StartingPage.Bytes), (int)ViewOffset);
+                try {
+                    Marshal.WriteInt64(ptr, value1);
+                    Marshal.WriteInt32(IntPtr.Add(ptr, sizeof(long)), value2);
+                } finally {
+                    View.SafeMemoryMappedViewHandle.ReleasePointer();
+                }
+            }
+
+            public void Write(long value1, long value2)
+            {
+                IntPtr ptr = IntPtr.Add(View.Pointer((int)StartingPage.Bytes), (int)ViewOffset);
+                try {
+                    Marshal.WriteInt64(ptr, value1);
+                    Marshal.WriteInt64(IntPtr.Add(ptr, sizeof(long)), value2);
+                } finally {
+                    View.SafeMemoryMappedViewHandle.ReleasePointer();
+                }
+            }
+
+            public void Write(long value1, int value2, long value3)
+            {
+                IntPtr ptr = IntPtr.Add(View.Pointer((int)StartingPage.Bytes), (int)ViewOffset);
+                try {
+                    Marshal.WriteInt64(ptr, value1);
+                    Marshal.WriteInt32(IntPtr.Add(ptr, sizeof(long)), value2);
+                    Marshal.WriteInt64(IntPtr.Add(ptr, sizeof(int) + sizeof(long)), value3);
+                } finally {
+                    View.SafeMemoryMappedViewHandle.ReleasePointer();
+                }
+            }
+
             public void WriteArrayWithLengthPrefix(byte[] data)
             {
                 IntPtr ptr = IntPtr.Add(View.Pointer((int)StartingPage.Bytes), (int)ViewOffset);
@@ -213,6 +237,25 @@ namespace JoqerQueue
                 }
             }
 #else
+            public void Write(long value1, int value2)
+            {
+                View.Write(ViewOffset, value1);
+                View.Write(ViewOffset + sizeof(long), value2);
+            }
+
+            public void Write(long value1, long value2)
+            {
+                View.Write(ViewOffset, value1);
+                View.Write(ViewOffset + sizeof(long), value2);
+            }
+
+            public void Write(long value1, int value2, long value3)
+            {
+                View.Write(ViewOffset, value1);
+                View.Write(ViewOffset + sizeof(long), value2);
+                View.Write(ViewOffset + sizeof(long) + sizeof(int), value3);
+            }
+
             public void WriteArrayWithLengthPrefix(byte[] data)
             {
                 View.Write(data.Length);
