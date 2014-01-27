@@ -35,13 +35,15 @@ namespace JoqerCtl
 
                 while ((++i < args.Length) && (args[i][0] == '-')) {
                     flags.Add(args[i].Substring(1));
+                    args = args.Skip(1).ToArray();
                 }
 
                 string name = Guid.NewGuid().ToString("n");
                 if (i < args.Length) {
                     name = args[i];
+                    args = args.Skip(1).ToArray();
                 }
-                new Controller(operation, name, flags.ToArray(), args);
+                new Controller(operation, name, flags.ToArray(), args.Skip(1).ToArray());
 
             } catch (Exception ex) {
                 Console.WriteLine(ex.Message);
@@ -77,7 +79,11 @@ namespace JoqerCtl
                 var q = CreateQueue(fullPath, capacity, opt, segments, writeAhead);
                 Console.WriteLine("Re-set queue {0}", q);
             } else if (operation == "read") {
-                var readloop = new ContinuousReader(Queue.Open(TestQueue));
+                var q = Queue.Open(fullPath);
+                Console.WriteLine("Listening on queue '{0}')", q.HeadFilePath());
+                new QueueInfo().Print(fullPath);
+
+                var readloop = new ContinuousReader(Queue.Open(fullPath));
                 readloop.Start();
                 WaitForInputAndExit();
             } else if (operation == "readone") {
@@ -88,6 +94,8 @@ namespace JoqerCtl
                 new TestFill(TestQueue).Run(args, flags);
             } else if (operation == "hammer") {
                 new HammerFill().Run(args);
+            } else if (operation == "copy") {
+                new HotCopy().Copy(fullPath, args);
             }
         }
 
@@ -147,7 +155,7 @@ namespace JoqerCtl
             return fullPath;
         }
 
-        private const string ValidOperations = "create|info|reset|read|readone|readall|test|hammer";
+        private const string ValidOperations = "create|info|reset|read|readone|readall|test|hammer|copy";
         private static bool IsValidOperation(string operation)
         {
             return ("|" + ValidOperations).Contains("|" + operation.ToLowerInvariant());

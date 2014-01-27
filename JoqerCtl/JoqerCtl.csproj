@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Include="Operations\ContinuousReader.cs" />
     <Compile Include="Operations\HammerFill.cs" />
+    <Compile Include="Operations\HotCopy.cs" />
     <Compile Include="Operations\QueueInfo.cs" />
     <Compile Include="Operations\QuickDump.cs" />
     <Compile Include="Controller.cs" />
