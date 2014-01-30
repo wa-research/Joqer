@@ -96,6 +96,9 @@ namespace JoqerCtl
                 new HammerFill().Run(args);
             } else if (operation == "copy") {
                 new HotCopy().Copy(fullPath, args);
+            } else if (operation == "rewind") {
+                using (var q = Queue.Open(fullPath))
+                    q.Header.NextIndexIsnToReadWithDefaultReader = SequenceNumber.Zero;
             }
         }
 
@@ -155,7 +158,7 @@ namespace JoqerCtl
             return fullPath;
         }
 
-        private const string ValidOperations = "create|info|reset|read|readone|readall|test|hammer|copy";
+        private const string ValidOperations = "create|info|reset|read|readone|readall|test|hammer|copy|rewind";
         private static bool IsValidOperation(string operation)
         {
             return ("|" + ValidOperations).Contains("|" + operation.ToLowerInvariant());
