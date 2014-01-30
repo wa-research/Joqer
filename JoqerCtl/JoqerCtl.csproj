@@ -52,9 +52,6 @@
     <Compile Include="Operations\TestFill.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\JoqerQueue\JoqerQueue.csproj">
       <Project>{daae5095-3f49-49f1-8b53-a25aae3bd806}</Project>
       <Name>JoqerQueue</Name>
