@@ -20,8 +20,11 @@ namespace JoqerQueue
 
         internal static QueueReader Create(Queue q, QueueReaderSettings settings)
         {
-            if (settings.PollInterval < 0)
-                settings.PollInterval = 1;
+            // Sleep at least 150 ms, otherwise thread context switches will eat a lot of processor time
+            // Longer sleep speeds things up since the cursor will sequentially process all items that accummulated 
+            // since last poll, reducing the amount of polling needed
+            if (settings.PollInterval <= 0)
+                settings.PollInterval = QueueReaderSettings.DefaultPollInterval;
 
             return new QueueReader
             {
