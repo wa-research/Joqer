@@ -25,7 +25,7 @@ namespace JoqerCtl
             using (var q = Queue.OpenReader(queuePath)) {
                 float i = 0;
                 float sz = 0;
-                int nulls = 0;
+                //int nulls = 0;
                 var s = Stopwatch.StartNew();
                 var b = q.DequeueOne();
                 while (b != null) {

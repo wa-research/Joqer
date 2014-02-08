@@ -44,14 +44,12 @@
   <ItemGroup>
     <Compile Include="Operations\ContinuousReader.cs" />
     <Compile Include="Operations\HammerFill.cs" />
+    <Compile Include="Operations\HotCopy.cs" />
     <Compile Include="Operations\QueueInfo.cs" />
     <Compile Include="Operations\QuickDump.cs" />
     <Compile Include="Controller.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Operations\TestFill.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\JoqerQueue\JoqerQueue.csproj">

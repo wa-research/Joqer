@@ -15,6 +15,7 @@ namespace JoqerQueue
         public long LogicalOffset { get { return _offset; } set { _offset = value; } }
 
         public const long FirstWriteOffset = 0L;
+        public static SequenceNumber Zero = new SequenceNumber(FirstWriteOffset); 
 
         public SequenceNumber NextFile()
         {
