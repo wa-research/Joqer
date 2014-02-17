@@ -98,7 +98,7 @@ namespace JoqerCtl
                 new HotCopy().Copy(fullPath, args);
             } else if (operation == "rewind") {
                 using (var q = Queue.Open(fullPath))
-                    q.Header.NextIndexIsnToReadWithDefaultReader = SequenceNumber.Zero;
+                    q.Rewind(SequenceNumber.Zero);
             }
         }
 

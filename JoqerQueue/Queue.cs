@@ -202,6 +202,11 @@ namespace JoqerQueue
             return new SequenceNumber { LogicalOffset = _mmap_view_header.ReadInt64(Header.Offsets.NextIndexIsnToReadWithDefaultReader) };
         }
 
+        public void Rewind(SequenceNumber isn)
+        {
+            UpdateNextIsnForDefaultReader(isn);
+        }
+
         internal void UpdateNextIsnForDefaultReader(SequenceNumber isn)
         {
             _mmap_view_header.Write(Header.Offsets.NextIndexIsnToReadWithDefaultReader, isn.LogicalOffset);
