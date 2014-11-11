@@ -1,4 +1,5 @@
-﻿
+﻿using System;
+
 namespace JoqerQueue
 {
     public class PersistentDefaultReaderCursor : IReaderCursor
@@ -6,6 +7,7 @@ namespace JoqerQueue
         Queue _queue;
         private int _indexFieldSize;
         PageCount _indexSegmentSize;
+        Guid _readerBookmark = Guid.Empty;
 
         public PersistentDefaultReaderCursor(Queue q)
         {
@@ -16,7 +18,7 @@ namespace JoqerQueue
 
         public SequenceNumber CurrentIsn()
         {
-            return _queue.ReadNextIsnForDefaultReader();
+            return _queue.ReadNextAvailableSequenceForBookmark(_readerBookmark);
         }
 
         public SequenceNumber MaxIsn()
@@ -27,8 +29,7 @@ namespace JoqerQueue
         public SequenceNumber Advance(SequenceNumber isn)
         {
             SequenceNumber nextisn = IncrementIndexSequenceNumber(isn, _indexSegmentSize.Bytes);
-            _queue.UpdateNextIsnForDefaultReader(nextisn);
-            return nextisn;
+            return _queue.UpdateReaderBookmark(_readerBookmark, nextisn); 
         }
 
         public SequenceNumber IncrementIndexSequenceNumber(SequenceNumber isn, long segmentSize)

@@ -38,5 +38,15 @@ namespace JoqerQueue
             }
             return sn;
         }
+
+        public static SequenceNumber Increment(this SequenceNumber isn, int slotSize, PageCount segmentSize)
+        {
+            if ((ulong)(isn.FileOffset + slotSize) >= (ulong)segmentSize.Bytes) {
+                isn = isn.NextFile();
+            } else {
+                isn.LogicalOffset += slotSize;
+            }
+            return isn;
+        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
@@ -197,21 +198,6 @@ namespace JoqerQueue
         }
 
         #region Offsets
-        internal SequenceNumber ReadNextIsnForDefaultReader()
-        {
-            return new SequenceNumber { LogicalOffset = _mmap_view_header.ReadInt64(Header.Offsets.NextIndexIsnToReadWithDefaultReader) };
-        }
-
-        public void Rewind(SequenceNumber isn)
-        {
-            UpdateNextIsnForDefaultReader(isn);
-        }
-
-        internal void UpdateNextIsnForDefaultReader(SequenceNumber isn)
-        {
-            _mmap_view_header.Write(Header.Offsets.NextIndexIsnToReadWithDefaultReader, isn.LogicalOffset);
-        }
-
         internal SequenceNumber ReadNextAvailableIndexSequenceNumber()
         {
             return new SequenceNumber { LogicalOffset = _mmap_view_header.ReadInt64(Header.Offsets.NextAvailableIndexSequenceNumber) };
@@ -230,6 +216,32 @@ namespace JoqerQueue
         public void UpdateNextAvailableDataSequenceNumber(SequenceNumber dsn)
         {
             _mmap_view_header.Write(Header.Offsets.NextAvailableDataSequenceNumber, dsn.LogicalOffset);
+        }
+        #endregion
+
+
+        #region Reader bookmarks
+        public IEnumerable<ReaderBookmark> EnumerateReaderBookmarks()
+        {
+            return Header.Bookmarks(_mmap_view_header);
+        }
+
+        public ReaderBookmark RegisterReaderBookmark()
+        {
+            return Header.RegisterReaderBookmark(_mmap_view_header);
+        }
+
+        public SequenceNumber ReadNextAvailableSequenceForBookmark(Guid id)
+        {
+            int offset = Header.GetReaderOffset(id);
+            return new SequenceNumber { LogicalOffset = _mmap_view_header.ReadInt64(offset) };
+        }
+
+        public SequenceNumber UpdateReaderBookmark(Guid id, SequenceNumber newValue)
+        {
+            int offset = Header.GetReaderOffset(id);
+            _mmap_view_header.Write(offset, newValue.LogicalOffset);
+            return newValue;
         }
         #endregion
 

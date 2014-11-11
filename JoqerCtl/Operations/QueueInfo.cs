@@ -40,6 +40,16 @@ namespace JoqerCtl
             Info("Queue depth:", SequenceDiff(h.NextAvailableIndexSequenceNumber, h.NextIndexIsnToReadWithDefaultReader, q.GetIndexRecordSizeBytes(), h.IndexSegmentSize.Bytes));
 
             Info("Flags:", PrintFlags(h.Flags));
+
+            Console.WriteLine();
+            Info("Readers", string.Empty);
+            Console.WriteLine();
+
+            var recSize = q.GetIndexRecordSizeBytes();
+
+            foreach (var bm in q.EnumerateReaderBookmarks()) {
+                Info(bm.Guid.ToString(), ISN(bm.SequenceNumber, recSize));
+            }
         }
 
         private long SequenceDiff(SequenceNumber sn1, SequenceNumber sn2, int recordSize, long indexSegmentSize)

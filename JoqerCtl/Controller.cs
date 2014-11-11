@@ -98,7 +98,13 @@ namespace JoqerCtl
                 new HotCopy().Copy(fullPath, args);
             } else if (operation == "rewind") {
                 using (var q = Queue.Open(fullPath))
-                    q.Rewind(SequenceNumber.Zero);
+                    q.UpdateReaderBookmark(Guid.Empty, SequenceNumber.Zero);
+            } else if (operation == "register") {
+                using (var q = Queue.Open(fullPath)) {
+                    var bm = q.RegisterReaderBookmark();
+                    Console.WriteLine("Registered new bookmark {0}", bm.Guid);
+                }
+
             }
         }
 
@@ -158,7 +164,7 @@ namespace JoqerCtl
             return fullPath;
         }
 
-        private const string ValidOperations = "create|info|reset|read|readone|readall|test|hammer|copy|rewind";
+        private const string ValidOperations = "create|info|reset|read|readone|readall|test|hammer|copy|rewind|register";
         private static bool IsValidOperation(string operation)
         {
             return ("|" + ValidOperations).Contains("|" + operation.ToLowerInvariant());
