@@ -73,7 +73,7 @@ namespace JoqerCtl
                 var q = CreateQueue(fullPath, capacity, opt, segments, writeAhead);
                 Console.WriteLine("Created queue {0}", q);
             } else if (operation == "info") {
-                new QueueInfo().Print(fullPath);
+                new QueueInfoPrinter().Print(fullPath);
             } else if (operation == "reset") {
                 DeleteQueue(fullPath);
                 var q = CreateQueue(fullPath, capacity, opt, segments, writeAhead);
@@ -81,7 +81,7 @@ namespace JoqerCtl
             } else if (operation == "read") {
                 var q = Queue.Open(fullPath);
                 Console.WriteLine("Listening on queue '{0}')", q.HeadFilePath());
-                new QueueInfo().Print(fullPath);
+                new QueueInfoPrinter().Print(fullPath);
 
                 var readloop = new ContinuousReader(Queue.Open(fullPath));
                 readloop.Start();
@@ -98,10 +98,10 @@ namespace JoqerCtl
                 new HotCopy().Copy(fullPath, args);
             } else if (operation == "rewind") {
                 using (var q = Queue.Open(fullPath))
-                    q.UpdateReaderBookmark(Guid.Empty, SequenceNumber.Zero);
+                    q.UpdateBookmark(Guid.Empty, SequenceNumber.Zero);
             } else if (operation == "register") {
                 using (var q = Queue.Open(fullPath)) {
-                    var bm = q.RegisterReaderBookmark();
+                    var bm = q.CreateBookmark();
                     Console.WriteLine("Registered new bookmark {0}", bm.Guid);
                 }
 

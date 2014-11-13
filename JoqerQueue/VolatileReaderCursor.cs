@@ -34,7 +34,7 @@ namespace JoqerQueue
 
         public SequenceNumber MaxIsn()
         {
-            return _queue.ReadNextAvailableIndexSequenceNumber();
+            return _queue.NextAvailableIndexSequenceNumber();
         }
     }
 }

@@ -17,11 +17,11 @@ namespace JoqerQueue
         public SequenceNumber NextAvailableDataSequenceNumber { get; set; }
         public SequenceNumber FirstValidIndexSequenceNumber { get; set; }
         public SequenceNumber NextAvailableIndexSequenceNumber { get; set; }
-        public SequenceNumber NextIndexIsnToReadWithDefaultReader { get; set; }
+        public SequenceNumber DefaultReaderBookmark { get; set; }
         public short ActiveDataFile { get { return NextAvailableDataSequenceNumber.FileNumber; } }
         public short ActiveIndexFile { get { return NextAvailableIndexSequenceNumber.FileNumber; } }
 
-        private Dictionary<Guid, int> _readerBookmarkOffsets;
+        private Dictionary<Guid, int> _bookmarkOffsets;
 
         public static class Offsets
         {
@@ -44,9 +44,9 @@ namespace JoqerQueue
             // long
             public const int NextAvailableIndexSequenceNumber = NextAvailableDataSequenceNumber + 8;
             // long
-            public const int NextIndexIsnToReadWithDefaultReader = NextAvailableIndexSequenceNumber + 8;
+            public const int DefaultReaderBookmark = NextAvailableIndexSequenceNumber + 8;
             // table of custom reader bookmarks-- (guid, long) pairs starts after the default reader bookmark
-            public const int ReaderBookmarkTableStart = NextIndexIsnToReadWithDefaultReader + 8;
+            public const int ReaderBookmarkTableStart = DefaultReaderBookmark + 8;
         }
 
         public static Header Open(MemoryMappedViewAccessor va)
@@ -62,24 +62,29 @@ namespace JoqerQueue
                 FirstValidIndexSequenceNumber = new SequenceNumber(va.ReadInt64(Offsets.FirstValidIndexSequenceNumber)),
                 NextAvailableDataSequenceNumber = new SequenceNumber(va.ReadInt64(Offsets.NextAvailableDataSequenceNumber)),
                 NextAvailableIndexSequenceNumber = new SequenceNumber(va.ReadInt64(Offsets.NextAvailableIndexSequenceNumber)),
-                NextIndexIsnToReadWithDefaultReader = new SequenceNumber(va.ReadInt64(Offsets.NextIndexIsnToReadWithDefaultReader))
+                DefaultReaderBookmark = new SequenceNumber(va.ReadInt64(Offsets.DefaultReaderBookmark))
             };
 
-            h.ReHydrateReaderBookmarkLookup(va);
+            h.ReHydrateBookmarkLookup(va);
 
             return h;
         }
 
-        private void ReHydrateReaderBookmarkLookup(MemoryMappedViewAccessor va)
+        private void ReHydrateBookmarkLookup(MemoryMappedViewAccessor va)
         {
-            _readerBookmarkOffsets = new Dictionary<Guid, int>();
-            int pos = Offsets.ReaderBookmarkTableStart;
-            Guid g = ReadGuid(va, pos);
-            while (g != Guid.Empty && pos < va.Capacity) {
-                _readerBookmarkOffsets.Add(g, pos + 16);
-                pos += (16 + 8);
-                g = ReadGuid(va, pos);
+            _bookmarkOffsets = new Dictionary<Guid, int>();
+            foreach (var o in BookmarkOffsets(va)) {
+                if (o.ID != ReaderBookmark.Unused)
+                    _bookmarkOffsets.Add(o.ID, o.Offset + 16);
             }
+        }
+
+        internal int LookUpBookmarkOffset(Guid id)
+        {
+            if (id == Guid.Empty) return Offsets.DefaultReaderBookmark;
+            else if (_bookmarkOffsets.ContainsKey(id)) return _bookmarkOffsets[id];
+
+            throw new KeyNotFoundException("The bookmark with GUID='" + id.ToString() + "' does not exist.");
         }
 
         private Guid ReadGuid(MemoryMappedViewAccessor va, long position)
@@ -89,35 +94,69 @@ namespace JoqerQueue
             return new Guid(buf);
         }
 
-        internal ReaderBookmark RegisterReaderBookmark(MemoryMappedViewAccessor vm)
+        internal ReaderBookmark RegisterBookmark(MemoryMappedViewAccessor va)
         {
             ReaderBookmark bm = new ReaderBookmark(Guid.NewGuid(), FirstValidIndexSequenceNumber);
-            // _readerBookmarkOffsets already contains all registered bookmarks, we can use it to calculate the next bookmark's offset
-            int offset = _readerBookmarkOffsets.Count * (16 + 8) + Offsets.ReaderBookmarkTableStart;
-            vm.WriteArray(offset, bm.Guid.ToByteArray(), 0, 16);
-            vm.Write(offset + 16, bm.SequenceNumber.LogicalOffset);
-            _readerBookmarkOffsets.Add(bm.Guid, offset + 16);
+            int offset = FindNextAvailableOffset(va);
+
+            //TODO: Extend header segment once we run out of space
+            //if (offset + _bookmarkWidth > va.Capacity) { }
+
+            bm = WriteBookmark(va, bm, offset);
+            _bookmarkOffsets.Add(bm.Guid, offset + 16);
 
             return bm;
         }
 
-        internal bool IsBookmarkRegistered(Guid id)
+        internal void UnregisterBookmark(MemoryMappedViewAccessor va, Guid bookmarkId)
         {
-            return _readerBookmarkOffsets.ContainsKey(id);
+            int offset = LookUpBookmarkOffset(bookmarkId);
+            _bookmarkOffsets.Remove(bookmarkId);
+            WriteBookmark(va, new ReaderBookmark(ReaderBookmark.Unused, SequenceNumber.Zero), offset);
         }
 
-        internal int GetReaderOffset(Guid id)
+        private static ReaderBookmark WriteBookmark(MemoryMappedViewAccessor va, ReaderBookmark bm, int offset)
         {
-            if (id == Guid.Empty) return Offsets.NextIndexIsnToReadWithDefaultReader;
-            else if (_readerBookmarkOffsets.ContainsKey(id)) return _readerBookmarkOffsets[id];
+            va.WriteArray(offset, bm.Guid.ToByteArray(), 0, 16);
+            va.Write(offset + 16, bm.SequenceNumber.LogicalOffset);
+            return bm;
+        }
 
-            throw new KeyNotFoundException("The bookmark with GUID='" + id.ToString() + "' does not exist.");
+        private int FindNextAvailableOffset(MemoryMappedViewAccessor va)
+        {
+            int offset = Offsets.ReaderBookmarkTableStart - _bookmarkWidth;
+            foreach (var o in BookmarkOffsets(va)) {
+                offset = o.Offset;
+                if (o.ID == ReaderBookmark.Unused)
+                    return offset;
+            }
+            // There were no unused slots, next position is after the last bookmark
+            return offset + _bookmarkWidth;
+        }
+
+        private const int _bookmarkWidth = 16 + 8;
+
+        private struct BookmarkOffset
+        {
+            public Guid ID;
+            public int Offset;
+        }
+
+        private IEnumerable<BookmarkOffset> BookmarkOffsets(MemoryMappedViewAccessor va)
+        {
+            int pos = Offsets.ReaderBookmarkTableStart;
+            Guid g = ReadGuid(va, pos);
+            while (g != Guid.Empty && pos + _bookmarkWidth < va.Capacity) {
+                yield return new BookmarkOffset { ID = g, Offset = pos };
+                pos += _bookmarkWidth;
+                g = ReadGuid(va, pos);
+            }
         }
 
         internal IEnumerable<ReaderBookmark> Bookmarks(MemoryMappedViewAccessor va)
         {
-            yield return new ReaderBookmark(Guid.Empty, NextIndexIsnToReadWithDefaultReader);
-            foreach (var kv in _readerBookmarkOffsets) {
+            yield return new ReaderBookmark(Guid.Empty, DefaultReaderBookmark);
+            foreach (var kv in _bookmarkOffsets) {
                 yield return new ReaderBookmark(kv.Key, new SequenceNumber(va.ReadInt64(kv.Value)));
             }
         }

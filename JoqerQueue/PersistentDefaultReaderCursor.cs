@@ -18,18 +18,18 @@ namespace JoqerQueue
 
         public SequenceNumber CurrentIsn()
         {
-            return _queue.ReadNextAvailableSequenceForBookmark(_readerBookmark);
+            return _queue.ReadBookmark(_readerBookmark);
         }
 
         public SequenceNumber MaxIsn()
         {
-            return _queue.ReadNextAvailableIndexSequenceNumber();
+            return _queue.NextAvailableIndexSequenceNumber();
         }
 
         public SequenceNumber Advance(SequenceNumber isn)
         {
             SequenceNumber nextisn = IncrementIndexSequenceNumber(isn, _indexSegmentSize.Bytes);
-            return _queue.UpdateReaderBookmark(_readerBookmark, nextisn); 
+            return _queue.UpdateBookmark(_readerBookmark, nextisn); 
         }
 
         public SequenceNumber IncrementIndexSequenceNumber(SequenceNumber isn, long segmentSize)

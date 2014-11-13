@@ -5,7 +5,7 @@ using JoqerQueue;
 
 namespace JoqerCtl
 {
-    class QueueInfo
+    class QueueInfoPrinter
     {
         public void Print(string name)
         {
@@ -20,24 +20,27 @@ namespace JoqerCtl
                 throw new ApplicationException(string.Format("Queue lock file '{0}' does not exist", lockFile));
 
             var h = q.Header;
+            var info = new QueueInfo(q);
 
-            Info("Path:", fullPath);
-            Info("Header version:", h.Version);
-            Info("Mode:", h.MaxDataSegments == 0 ? "Unbounded" : "Circular");
-            Info("Max data segments:", h.MaxDataSegments == 0 ? Int16.MaxValue : h.MaxDataSegments);
-            Info("Data segment size KB:", h.DataSegmentSize.Bytes / 1024);
-            Info("Index segment size KB:", h.IndexSegmentSize.Bytes / 1024);
-            Info("Active data segment:", h.ActiveDataFile);
-            Info("Active index segment:", h.ActiveIndexFile);
-            Info("Active data segment free space:", h.DataSegmentSize.Bytes - h.NextAvailableDataSequenceNumber.FileOffset);
-            Info("Active index segment free entries:", (h.IndexSegmentSize.Bytes - h.NextAvailableIndexSequenceNumber.FileOffset) / q.GetIndexRecordSizeBytes());
-            Info("Total items writen:", ((h.ActiveIndexFile * h.IndexSegmentSize.Bytes) + h.NextAvailableIndexSequenceNumber.FileOffset) / q.GetIndexRecordSizeBytes());
+            var indexWidth = info.IndexRecordWidthInBytes;
+
+            Info("Path:", info.FullPath);
+            Info("Header version:", info.HeaderVersion);
+            Info("Mode:", info.GrowthMode.ToString());
+            Info("Max data segments:", info.MaxDataSegments);
+            Info("Data segment size KB:", info.DataSegmentSize.Bytes / 1024);
+            Info("Index segment size KB:", info.IndexSegmentSize.Bytes / 1024);
+            Info("Active data segment:", info.ActiveDataSegment);
+            Info("Active index segment:", info.ActiveIndexSegment);
+            Info("Active data segment free space:", info.ActiveDataSegmentFreeSpace);
+            Info("Active index segment free entries:", info.ActiveIndexSegmentFreeEntries);
+            Info("Total items writen:", info.TotalItemsWritten);
             //Info("First valid data file:", h.FirstValidDataSequenceNumber.FileNumber);
             //Info("First valid index file:", h.FirstValidIndexSequenceNumber.FileNumber);
             Console.WriteLine();
-            Info("Next index position to read:", ISN(h.NextIndexIsnToReadWithDefaultReader, q.GetIndexRecordSizeBytes()));
-            Info("Next index position to write:", ISN(h.NextAvailableIndexSequenceNumber, q.GetIndexRecordSizeBytes()));
-            Info("Queue depth:", SequenceDiff(h.NextAvailableIndexSequenceNumber, h.NextIndexIsnToReadWithDefaultReader, q.GetIndexRecordSizeBytes(), h.IndexSegmentSize.Bytes));
+            Info("Next index position to read:", ISN(h.DefaultReaderBookmark, info.IndexRecordWidthInBytes));
+            Info("Next index position to write:", ISN(info.NextAvailableIndexSequenceNumber, info.IndexRecordWidthInBytes));
+            Info("Queue depth:", SequenceDiff(info.NextAvailableIndexSequenceNumber, h.DefaultReaderBookmark, info.IndexRecordWidthInBytes, info.IndexSegmentSize.Bytes));
 
             Info("Flags:", PrintFlags(h.Flags));
 
@@ -45,10 +48,9 @@ namespace JoqerCtl
             Info("Readers", string.Empty);
             Console.WriteLine();
 
-            var recSize = q.GetIndexRecordSizeBytes();
 
-            foreach (var bm in q.EnumerateReaderBookmarks()) {
-                Info(bm.Guid.ToString(), ISN(bm.SequenceNumber, recSize));
+            foreach (var bm in q.Bookmarks()) {
+                Info(bm.Guid.ToString(), ISN(bm.SequenceNumber, indexWidth));
             }
         }
 

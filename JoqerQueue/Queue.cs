@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Reflection;
@@ -34,6 +33,9 @@ namespace JoqerQueue
 
         public static Queue Open(string queuePath)
         {
+            if (!Directory.Exists(queuePath))
+                throw new DirectoryNotFoundException("The queue does not exist");
+            
             var q = new Queue(queuePath);
             q._mmap_head = q.OpenHead();
             q._mmap_view_header = q._mmap_head.CreateViewAccessor();
@@ -80,7 +82,7 @@ namespace JoqerQueue
                     q.Header.Flags = options;
                     q.Header.MaxDataSegments = maxSegments;
                     q.Header.DataSegmentSize = dataSegmentSize;
-                    q.Header.IndexSegmentSize = AdjustIndexSize(indexSegmentSize, GetIndexSizeBytes(options));
+                    q.Header.IndexSegmentSize = AdjustIndexSize(indexSegmentSize, GetIndexRecordSizeInBytes(options));
                     q.WriteHeader(va);
                 }
             }
@@ -122,7 +124,7 @@ namespace JoqerQueue
             ViewAccessor.Write(Header.Offsets.FirstValidIndexSequenceNumber, _header.FirstValidIndexSequenceNumber.LogicalOffset);
             ViewAccessor.Write(Header.Offsets.NextAvailableDataSequenceNumber, _header.NextAvailableDataSequenceNumber.LogicalOffset);
             ViewAccessor.Write(Header.Offsets.NextAvailableIndexSequenceNumber, _header.NextAvailableIndexSequenceNumber.LogicalOffset);
-            ViewAccessor.Write(Header.Offsets.NextIndexIsnToReadWithDefaultReader, _header.NextIndexIsnToReadWithDefaultReader.LogicalOffset);
+            ViewAccessor.Write(Header.Offsets.DefaultReaderBookmark, _header.DefaultReaderBookmark.LogicalOffset);
         }
 
         public MemoryMappedFile OpenHead()
@@ -187,10 +189,10 @@ namespace JoqerQueue
 
         public int GetIndexRecordSizeBytes()
         {
-            return GetIndexSizeBytes(_header.Flags);
+            return GetIndexRecordSizeInBytes(_header.Flags);
         }
 
-        private static int GetIndexSizeBytes(QueueOptions f)
+        private static int GetIndexRecordSizeInBytes(QueueOptions f)
         {
             return sizeof(long)
                 + (f.HasFlag(QueueOptions.StoreSizeInIndex) ? sizeof(int) : 0)
@@ -198,7 +200,7 @@ namespace JoqerQueue
         }
 
         #region Offsets
-        internal SequenceNumber ReadNextAvailableIndexSequenceNumber()
+        public SequenceNumber NextAvailableIndexSequenceNumber()
         {
             return new SequenceNumber { LogicalOffset = _mmap_view_header.ReadInt64(Header.Offsets.NextAvailableIndexSequenceNumber) };
         }
@@ -208,12 +210,12 @@ namespace JoqerQueue
             _mmap_view_header.Write(Header.Offsets.NextAvailableIndexSequenceNumber, isn.LogicalOffset);
         }
 
-        public SequenceNumber ReadNextAvailableDataSequenceNumber()
+        public SequenceNumber NextAvailableDataSequenceNumber()
         {
             return new SequenceNumber { LogicalOffset = _mmap_view_header.ReadInt64(Header.Offsets.NextAvailableDataSequenceNumber) };
         }
 
-        public void UpdateNextAvailableDataSequenceNumber(SequenceNumber dsn)
+        internal void UpdateNextAvailableDataSequenceNumber(SequenceNumber dsn)
         {
             _mmap_view_header.Write(Header.Offsets.NextAvailableDataSequenceNumber, dsn.LogicalOffset);
         }
@@ -221,25 +223,30 @@ namespace JoqerQueue
 
 
         #region Reader bookmarks
-        public IEnumerable<ReaderBookmark> EnumerateReaderBookmarks()
+        public IEnumerable<ReaderBookmark> Bookmarks()
         {
             return Header.Bookmarks(_mmap_view_header);
         }
 
-        public ReaderBookmark RegisterReaderBookmark()
+        public ReaderBookmark CreateBookmark()
         {
-            return Header.RegisterReaderBookmark(_mmap_view_header);
+            return Header.RegisterBookmark(_mmap_view_header);
         }
 
-        public SequenceNumber ReadNextAvailableSequenceForBookmark(Guid id)
+        public void UnregisterBookmark(Guid id)
         {
-            int offset = Header.GetReaderOffset(id);
+            Header.UnregisterBookmark(_mmap_view_header, id);
+        }
+
+        public SequenceNumber ReadBookmark(Guid id)
+        {
+            int offset = Header.LookUpBookmarkOffset(id);
             return new SequenceNumber { LogicalOffset = _mmap_view_header.ReadInt64(offset) };
         }
 
-        public SequenceNumber UpdateReaderBookmark(Guid id, SequenceNumber newValue)
+        public SequenceNumber UpdateBookmark(Guid id, SequenceNumber newValue)
         {
-            int offset = Header.GetReaderOffset(id);
+            int offset = Header.LookUpBookmarkOffset(id);
             _mmap_view_header.Write(offset, newValue.LogicalOffset);
             return newValue;
         }

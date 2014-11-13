@@ -44,6 +44,8 @@
     <Compile Include="IReaderCursor.cs" />
     <Compile Include="LockMode.cs" />
     <Compile Include="PageCount.cs" />
+    <Compile Include="QueueGrowthMode.cs" />
+    <Compile Include="QueueInfo.cs" />
     <Compile Include="QueueOptions.cs" />
     <Compile Include="QueueReaderSettings.cs" />
     <Compile Include="QueueWriter.cs" />

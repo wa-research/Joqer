@@ -48,5 +48,10 @@ namespace JoqerQueue
             }
             return isn;
         }
+
+        public static string ToString(this SequenceNumber isn, int slotSize)
+        {
+            return string.Format("{0}:{1}", isn.FileNumber, isn.FileOffset / slotSize);
+        }
     }
 }
