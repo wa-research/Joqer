@@ -12,6 +12,7 @@ namespace JoqerQueue
         public int IndexRecordWidthInBytes { get; set; }
         public string FullPath { get; set; }
         public SequenceNumber NextAvailableIndexSequenceNumber { get; set; }
+        public SequenceNumber FirstValidIndexSequenceNumber { get; set; }
         public byte HeaderVersion { get; set; }
         public short ActiveDataSegment { get; set; }
         public short ActiveIndexSegment { get; set; }
@@ -40,6 +41,7 @@ namespace JoqerQueue
             IndexRecordWidthInBytes = q.GetIndexRecordSizeBytes();
             ActiveDataSegment = h.ActiveDataFile;
             ActiveIndexSegment = h.ActiveIndexFile;
+            FirstValidIndexSequenceNumber = q.Header.FirstValidIndexSequenceNumber;
             NextAvailableIndexSequenceNumber = q.NextAvailableIndexSequenceNumber();
             ActiveDataSegmentFreeSpace = h.DataSegmentSize.Bytes - h.NextAvailableDataSequenceNumber.FileOffset;
             ActiveIndexSegmentFreeEntries = (h.IndexSegmentSize.Bytes - h.NextAvailableIndexSequenceNumber.FileOffset) / q.GetIndexRecordSizeBytes();
