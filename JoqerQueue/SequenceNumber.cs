@@ -22,7 +22,7 @@ namespace JoqerQueue
             return new SequenceNumber { _offset = FirstWriteOffset, FileNumber = (short)(FileNumber + 1) };
         }
 
-        public SequenceNumber IncrementFileOffset(long increment)
+        internal SequenceNumber IncrementFileOffset(long increment)
         {
             return new SequenceNumber { _offset = _offset, FileOffset = FileOffset + increment };
         }
@@ -30,7 +30,7 @@ namespace JoqerQueue
 
     public static class SequenceNumberExtensions
     {
-        public static SequenceNumber WithFileRollover(this SequenceNumber sn, int slotSize, PageCount segmentSize)
+        public static SequenceNumber NextFileIfNotEnoughSpaceAtCurrentPosition(this SequenceNumber sn, int slotSize, PageCount segmentSize)
         {
             // Do we need to roll over into the next file?
             if ((ulong)(sn.FileOffset + slotSize) > (ulong)segmentSize.Bytes) {

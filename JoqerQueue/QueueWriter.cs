@@ -90,7 +90,7 @@ namespace JoqerQueue
             if (slotSize > _dataSegmentSize.Bytes)
                 throw new ArgumentOutOfRangeException("Body too large to store in the queue");    
             
-            SequenceNumber dsn = _queue.NextAvailableDataSequenceNumber().WithFileRollover(slotSize, _dataSegmentSize);
+            SequenceNumber dsn = _queue.NextAvailableDataSequenceNumber().NextFileIfNotEnoughSpaceAtCurrentPosition(slotSize, _dataSegmentSize);
             _queue.UpdateNextAvailableDataSequenceNumber(dsn.IncrementFileOffset(slotSize));
 
             return dsn;
@@ -98,7 +98,7 @@ namespace JoqerQueue
 
         private SequenceNumber UpdateIndex(SequenceNumber dataLsn, int bodyLength,  Action<MemoryView.ViewInfo, SequenceNumber, int> recordWriter)
         {
-            SequenceNumber isn = _queue.NextAvailableIndexSequenceNumber().WithFileRollover(_indexFieldSize, _indexSegmentSize);
+            SequenceNumber isn = _queue.NextAvailableIndexSequenceNumber().NextFileIfNotEnoughSpaceAtCurrentPosition(_indexFieldSize, _indexSegmentSize);
             recordWriter(_indexView.GetView(isn, _indexFieldSize), dataLsn, bodyLength);
             _queue.UpdateNextAvailableIndexSequenceNumber(isn.IncrementFileOffset(_indexFieldSize));
 
